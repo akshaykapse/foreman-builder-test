@@ -1,0 +1,151 @@
+# Lima configuration for Foreman development environment
+# Reference: https://lima-vm.io/docs/
+
+# Arch: "default" uses native architecture (ARM64 on Apple Silicon, x86_64 on Intel)
+arch: "default"
+
+# Rocky Linux 9 images for both architectures
+images:
+  - location: "https://download.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2"
+    arch: "aarch64"
+  - location: "https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+    arch: "x86_64"
+
+# VM Resources
+cpus: 4
+memory: "8GiB"
+disk: "100GiB"
+
+# Mount home directory for easy file sharing
+mounts:
+  - location: "~"
+    writable: true
+
+# SSH Configuration
+ssh:
+  localPort: 0  # Automatically assign a port
+  loadDotSSHPubKeys: true
+  forwardAgent: true
+
+# Disable containerd since we're using the VM directly
+containerd:
+  system: false
+  user: false
+
+# Port forwarding for Foreman services
+portForwards:
+  - guestPort: 3000
+    hostPort: 3000
+    proto: tcp
+  - guestPort: 5432
+    hostPort: 5432
+    proto: tcp
+  - guestPort: 443
+    hostPort: 8443
+    proto: tcp
+
+# Provisioning script
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # Install EPEL repository
+      dnf install -y epel-release
+
+      # Install base development tools
+      dnf install -y git zsh curl wget htop gcc gcc-c++ make perl openssl-devel \
+        libffi-devel readline-devel zlib-devel bzip2 autoconf automake libtool \
+        patch ansible-core
+
+      # Install config packages if specified
+      {{ if .InstallString }}dnf install -y {{ .InstallString }}{{ end }}
+
+      # Create user
+      if ! id -u {{ .Username }} > /dev/null 2>&1; then
+        useradd -m -G wheel -s /bin/bash {{ .Username }}
+      fi
+
+      # Set proper permissions
+      chown -R {{ .Username }}:{{ .Username }} /home/{{ .Username }}
+
+      # Set hostname
+      hostnamectl set-hostname foreman-dev.example.com
+      cat > /etc/hosts <<EOF
+      127.0.0.1 foreman-dev.example.com foreman-dev localhost localhost.localdomain
+      ::1       foreman-dev.example.com foreman-dev localhost localhost.localdomain
+      EOF
+
+      # Passwordless sudo for {{ .Username }}
+      echo "{{ .Username }} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{{ .Username }}
+      chmod 0440 /etc/sudoers.d/{{ .Username }}
+
+      # Enable EPEL + CRB repos, install libyaml-devel
+      dnf install -y --enablerepo=crb libyaml-devel
+
+      # Install Node.js 22
+      dnf module enable nodejs:22 -y
+      dnf install -y nodejs
+
+      echo "✓ Base system setup complete"
+
+  - mode: user
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # Install rbenv + Ruby 3.1.6
+      echo "Installing Ruby via rbenv..."
+      if [ ! -d "$HOME/.rbenv" ]; then
+        git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+        git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
+
+        echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bashrc
+        echo 'eval "$(rbenv init -)"' >> ~/.bashrc
+      fi
+
+      export PATH="$HOME/.rbenv/bin:$PATH"
+      eval "$(rbenv init -)"
+
+      if ! rbenv versions | grep -q "3.1.6"; then
+        rbenv install 3.1.6
+        rbenv global 3.1.6
+      fi
+
+      # Clone forklift and run katello-devel playbook
+      echo "Setting up Foreman development environment..."
+      if [ ! -d "$HOME/forklift" ]; then
+        git clone https://github.com/theforeman/forklift.git ~/forklift
+        cd ~/forklift
+        ansible-galaxy collection install community.general theforeman.operations
+
+        # Run katello-devel playbook
+        ansible-playbook -i "localhost," -c local \
+          -e foreman_repositories_environment=staging \
+          -e foreman_repositories_version=nightly \
+          -e katello_repositories_version=nightly \
+          -e foreman_installer_admin_password=changeme \
+          playbooks/katello_devel.yml
+      fi
+
+      echo "✓ Foreman development environment ready"
+
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # Create .env file
+      touch /home/{{ .Username }}/foreman/.env || true
+      chown {{ .Username }}:{{ .Username }} /home/{{ .Username }}/foreman/.env || true
+
+      # Fix installer answers (vagrant -> {{ .Username }}) and re-run
+      if [ -f /etc/foreman-installer/scenarios.d/katello-devel-answers.yaml ]; then
+        sed -i 's|/home/vagrant|/home/{{ .Username }}|g; s|user: vagrant|user: {{ .Username }}|g; s|group: vagrant|group: {{ .Username }}|g' \
+          /etc/foreman-installer/scenarios.d/katello-devel-answers.yaml
+        foreman-installer --scenario katello-devel -v --no-colors || true
+      fi
+
+# Custom bashrc additions
+plain: true
