@@ -6,14 +6,20 @@ import (
 	"os/exec"
 )
 
-type OrbInstance struct {
-	Name    string `json:"name"`
-	State   string `json:"state"`
-	Distro  string `json:"distro"`
-	Version string `json:"version"`
-	Arch    string `json:"arch"`
-	Size    string `json:"size"`
-	IP      string `json:"ip"`
+type LimaInstance struct {
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	SSHConfig string `json:"sshConfigFile"`
+	Arch      string `json:"arch"`
+	CPUs      int    `json:"cpus"`
+	Memory    int64  `json:"memory"`
+	Disk      int64  `json:"disk"`
+	Dir       string `json:"dir"`
+	Network   []struct {
+		VNL      string `json:"vnl"`
+		MACAddr  string `json:"macAddress"`
+		IPAddr   string `json:"ipAddress"`
+	} `json:"network"`
 }
 
 type ContainerInfoStruct struct {
@@ -22,27 +28,29 @@ type ContainerInfoStruct struct {
 	State string `json:"state"`
 }
 
-type OrbOptions struct {
+type LimaOptions struct {
 	ContainerName string `json:"containerName"`
 	Username      string `json:"username"`
 }
 
 var execCommand = exec.Command
 
-func IsOrbStackRunning() bool {
-	cmd := execCommand("orbctl", "status")
+// IsLimaInstalled checks if limactl is available
+func IsLimaInstalled() bool {
+	cmd := execCommand("which", "limactl")
 	return cmd.Run() == nil
 }
 
-func GetOrbStackContainers() ([]string, error) {
-	cmd := execCommand("orbctl", "list", "--format", "json")
+// GetLimaInstances returns a list of all Lima instance names
+func GetLimaInstances() ([]string, error) {
+	cmd := execCommand("limactl", "list", "--format", "json")
 
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
 
-	var instances []OrbInstance
+	var instances []LimaInstance
 	if err := json.Unmarshal(output, &instances); err != nil {
 		return nil, err
 	}
@@ -55,20 +63,27 @@ func GetOrbStackContainers() ([]string, error) {
 	return names, nil
 }
 
-func ContainerInfo(containerName string) (ContainerInfoStruct, error) {
-	cmd := execCommand("orbctl", "info", containerName, "--format", "json")
+// GetInstanceInfo returns detailed information about a specific Lima instance
+func GetInstanceInfo(instanceName string) (*LimaInstance, error) {
+	cmd := execCommand("limactl", "list", "--format", "json")
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return ContainerInfoStruct{}, fmt.Errorf("%s", exitErr.Stderr)
+			return nil, fmt.Errorf("%s", exitErr.Stderr)
 		}
-		return ContainerInfoStruct{}, err
+		return nil, err
 	}
 
-	var containerInfo ContainerInfoStruct
-
-	if err := json.Unmarshal(output, &containerInfo); err != nil {
-		return ContainerInfoStruct{}, err
+	var instances []LimaInstance
+	if err := json.Unmarshal(output, &instances); err != nil {
+		return nil, err
 	}
-	return containerInfo, nil
+
+	for _, inst := range instances {
+		if inst.Name == instanceName {
+			return &inst, nil
+		}
+	}
+
+	return nil, fmt.Errorf("instance not found: %s", instanceName)
 }

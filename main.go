@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	foremanbuilder "github.com/aidenfine/foreman-builder/foreman-builder"
-	"github.com/aidenfine/foreman-builder/foreman-builder/cmd"
+	foremanbuilder "github.com/akshaykapse/foreman-builder-test/foreman-builder"
+	"github.com/akshaykapse/foreman-builder-test/foreman-builder/cmd"
 )
 
 func main() {
@@ -15,8 +15,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if !foremanbuilder.IsOrbStackRunning() {
-		foremanbuilder.Logger.Fatal("Orbstack must be running")
+	if !foremanbuilder.IsLimaInstalled() {
+		foremanbuilder.Logger.Fatal("Lima must be installed. Install with: brew install lima")
 	}
 
 	home, err := os.UserHomeDir()
@@ -58,13 +58,14 @@ func main() {
 }
 
 func isSystemSupported() bool {
-	// arm64 = silicon chip
-	// amd64 = non silicon chip
+	// Lima supports both arm64 (Apple Silicon) and amd64 (Intel)
 	userCPU := runtime.GOARCH
 
-	if userCPU != "arm64" {
-		foremanbuilder.Logger.Fatal("foreman-builder does not currently support non apple-silicon devices!")
+	if userCPU != "arm64" && userCPU != "amd64" {
+		foremanbuilder.Logger.Fatalf("Unsupported architecture: %s. Lima supports arm64 and amd64.", userCPU)
 		return false
 	}
+
+	foremanbuilder.Logger.Infof("Detected architecture: %s", userCPU)
 	return true
 }

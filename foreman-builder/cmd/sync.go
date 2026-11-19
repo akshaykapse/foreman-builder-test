@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"slices"
 
-	foremanbuilder "github.com/aidenfine/foreman-builder/foreman-builder"
+	foremanbuilder "github.com/akshaykapse/foreman-builder-test/foreman-builder"
 )
 
 // var syncCmd = &cobra.Command{
 // 	Use:   "sync",
-// 	Short: "Sync foreman-builder containers with orbstack.",
+// 	Short: "Sync foreman-builder instances with Lima.",
 // 	Run: func(cmd *cobra.Command, args []string) {
 // 		runSync()
 // 	},
@@ -23,9 +23,9 @@ import (
 // }
 
 func SyncContainers() {
-	orbContainers, err := foremanbuilder.GetOrbStackContainers()
+	limaInstances, err := foremanbuilder.GetLimaInstances()
 	if err != nil {
-		foremanbuilder.Logger.Fatalf("Error: %v\n", err)
+		foremanbuilder.Logger.Fatalf("Error getting Lima instances: %v\n", err)
 	}
 
 	home, err := os.UserHomeDir()
@@ -41,12 +41,12 @@ func SyncContainers() {
 	}
 
 	for i := 0; i < len(foremanContainers)-1; i++ {
-		if !slices.Contains(orbContainers, foremanContainers[i]) {
+		if !slices.Contains(limaInstances, foremanContainers[i]) {
 			// mark for deletion
 			foremanbuilder.Logger.Debugf("During sync... deleting %s\n", foremanContainers[i])
 			err = foremanbuilder.DeleteLineInFile(containersPath, foremanContainers[i])
 			if err != nil {
-				fmt.Printf("Error deleting container from dotfile %v \n", err)
+				fmt.Printf("Error deleting instance from dotfile %v \n", err)
 			}
 		}
 	}

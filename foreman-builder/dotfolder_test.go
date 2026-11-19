@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	foremanbuilder "github.com/aidenfine/foreman-builder/foreman-builder"
+	foremanbuilder "github.com/akshaykapse/foreman-builder-test/foreman-builder"
 )
 
 func TestDoesFileOrDirectoryExist(t *testing.T) {

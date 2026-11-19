@@ -1,45 +1,27 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# Binaries (in root only)
+/foreman-builder
+/foreman-builder-lima
+/foreman-builder-test
 *.exe
-*.exe~
 *.dll
 *.so
 *.dylib
 
-# confs
-confs/*.yml
-confs/*_local.yml.tmpl
-
-# Test binary, built with `go test -c`
+# Test binary
 *.test
 
-# Code coverage profiles and other test artifacts
+# Output of the go coverage tool
 *.out
-coverage.*
-*.coverprofile
-profile.cov
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
 
 # Go workspace file
 go.work
-go.work.sum
 
-# env file
-.env
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-#config files
-*.yaml
-*.yml
-/build
-
-
-# Editor/IDE
-# .idea/
-# .vscode/
-
-# do not ignore action file 
-!.github/workflows/action.yml
+# OS
+.DS_Store

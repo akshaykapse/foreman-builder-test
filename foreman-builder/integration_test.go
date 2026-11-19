@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	foremanbuilder "github.com/aidenfine/foreman-builder/foreman-builder"
+	foremanbuilder "github.com/akshaykapse/foreman-builder-test/foreman-builder"
 )
 
 func sshRun(t *testing.T, container, sshUser, cmd string) (string, error) {

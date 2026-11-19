@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	foremanbuilder "github.com/aidenfine/foreman-builder/foreman-builder"
+	foremanbuilder "github.com/akshaykapse/foreman-builder-test/foreman-builder"
 	"github.com/spf13/cobra"
 )
 

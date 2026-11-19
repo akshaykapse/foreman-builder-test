@@ -10,10 +10,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed templates/orbstack-foreman.yml.tmpl
+//go:embed templates/lima-foreman.yml.tmpl
 var containerConfigTmpl string
 
-type OrbstackConfigData struct {
+type LimaConfigData struct {
 	Username      string
 	Packages      []string
 	InstallString string
@@ -42,8 +42,8 @@ func GetYmlValues(path string) (Config, error) {
 	return ParseConfig(file)
 }
 
-func GenerateContainerConfig(data OrbstackConfigData, pathName string) error {
-	tmpl, err := template.New("orbstack-foreman").Parse(containerConfigTmpl)
+func GenerateContainerConfig(data LimaConfigData, pathName string) error {
+	tmpl, err := template.New("lima-foreman").Parse(containerConfigTmpl)
 	if err != nil {
 		return err
 	}

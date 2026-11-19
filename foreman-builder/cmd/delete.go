@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	foremanbuilder "github.com/aidenfine/foreman-builder/foreman-builder"
+	foremanbuilder "github.com/akshaykapse/foreman-builder-test/foreman-builder"
 	"github.com/spf13/cobra"
 )
 
@@ -39,34 +39,40 @@ func (u User) runDelete(containerName string) {
 		os.Exit(1)
 
 	}
-	containerInfo, err := foremanbuilder.ContainerInfo(containerName)
+	instanceInfo, err := foremanbuilder.GetInstanceInfo(containerName)
 	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("machine not found: '%s'", containerName)) {
-			foremanbuilder.Logger.Debugf("Container does not exist in orbstack anymore just delete the line")
+		if strings.Contains(err.Error(), fmt.Sprintf("instance not found: %s", containerName)) {
+			foremanbuilder.Logger.Debugf("Instance does not exist in Lima anymore, just delete the line")
 			foremanbuilder.DeleteLineInFile(containersPath, containerName)
 			fmt.Printf("%s has been deleted\n", containerName)
 			os.Exit(1)
 		} else {
-			foremanbuilder.Logger.Fatalf("Failed to get container info: %v", err)
+			foremanbuilder.Logger.Fatalf("Failed to get instance info: %v", err)
 			os.Exit(1)
 		}
 
 	}
-	if containerInfo.State == "running" {
+	if instanceInfo.Status == "Running" {
 		var input string
 		for input != "y" && input != "n" {
-			fmt.Println("Container is currently running! \n Do you want to stop the container and delete? \n [y/n]")
+			fmt.Println("Lima instance is currently running! \n Do you want to stop the instance and delete? \n [y/n]")
 			fmt.Scanln(&input)
 		}
 		if input == "n" {
 			os.Exit(1)
 		}
-		// stop container
-		exec.Command("orbctl", "stop", containerName).Run()
+		// stop instance
+		stopCmd := exec.Command("limactl", "stop", containerName)
+		stopCmd.Stdout = os.Stdout
+		stopCmd.Stderr = os.Stderr
+		stopCmd.Run()
 
 	}
-	fmt.Printf("Deleting...\n")
-	exec.Command("orbctl", "delete", containerName, "-f").Run()
+	fmt.Printf("Deleting Lima instance...\n")
+	deleteCmd := exec.Command("limactl", "delete", containerName, "-f")
+	deleteCmd.Stdout = os.Stdout
+	deleteCmd.Stderr = os.Stderr
+	deleteCmd.Run()
 
 	// delete container in dotfile
 	foremanbuilder.DeleteLineInFile(containersPath, containerName)

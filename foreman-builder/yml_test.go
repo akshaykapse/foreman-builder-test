@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	foremanbuilder "github.com/aidenfine/foreman-builder/foreman-builder"
+	foremanbuilder "github.com/akshaykapse/foreman-builder-test/foreman-builder"
 )
 
 func TestParseConfig(t *testing.T) {

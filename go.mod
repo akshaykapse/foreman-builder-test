@@ -1,4 +1,4 @@
-module github.com/aidenfine/foreman-builder
+module github.com/akshaykapse/foreman-builder-test
 
 go 1.25.5
 
