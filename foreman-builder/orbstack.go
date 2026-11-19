@@ -1,9 +1,12 @@
 package foremanbuilder
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 type LimaInstance struct {
@@ -50,8 +53,23 @@ func GetLimaInstances() ([]string, error) {
 		return nil, err
 	}
 
+	// Lima outputs newline-delimited JSON, parse line by line
 	var instances []LimaInstance
-	if err := json.Unmarshal(output, &instances); err != nil {
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var inst LimaInstance
+		if err := json.Unmarshal([]byte(line), &inst); err != nil {
+			return nil, fmt.Errorf("failed to parse Lima instance: %w", err)
+		}
+		instances = append(instances, inst)
+	}
+
+	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 
@@ -74,15 +92,26 @@ func GetInstanceInfo(instanceName string) (*LimaInstance, error) {
 		return nil, err
 	}
 
-	var instances []LimaInstance
-	if err := json.Unmarshal(output, &instances); err != nil {
-		return nil, err
-	}
+	// Lima outputs newline-delimited JSON, parse line by line
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
 
-	for _, inst := range instances {
+		var inst LimaInstance
+		if err := json.Unmarshal([]byte(line), &inst); err != nil {
+			continue // Skip malformed lines
+		}
+
 		if inst.Name == instanceName {
 			return &inst, nil
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
 	}
 
 	return nil, fmt.Errorf("instance not found: %s", instanceName)
